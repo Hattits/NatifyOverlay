@@ -1,0 +1,14 @@
+# Build folders
+bin/
+obj/
+
+# User-specific config (NEVER SHARE YOUR TOKEN)
+config.json
+
+# Visual Studio files
+.vs/
+*.user
+*.suo
+
+.gemini/
+gha-creds-*.json
