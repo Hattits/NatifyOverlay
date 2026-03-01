@@ -11,6 +11,7 @@ using System.Drawing;
 using System.Diagnostics;
 using System.Windows.Media.Imaging;
 using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace NatifyOverlay
 {
@@ -58,8 +59,8 @@ namespace NatifyOverlay
             LoadConfig();
             Log("Config loaded.");
 
-            _overlay = new OverlayWindow();
-            Log("Overlay window created.");
+            _overlay = new OverlayWindow(_config!.Theme, _config.PlaySound);
+            Log($"Overlay window created with theme: {_config.Theme}, PlaySound: {_config.PlaySound}");
 
             // Set App Icon from Embedded Resource (Safer method)
             try
@@ -94,11 +95,13 @@ namespace NatifyOverlay
             app.Run(_overlay);
         }
 
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern bool DestroyIcon(IntPtr handle);
+
         private static void CreateTrayIcon()
         {
             _trayIcon = new NotifyIcon
             {
-                Visible = true,
                 Text = "NatifyOverlay (Running)"
             };
 
@@ -112,8 +115,17 @@ namespace NatifyOverlay
                     {
                         using (var bmp = new Bitmap(stream))
                         {
-                            _trayIcon.Icon = Icon.FromHandle(bmp.GetHicon());
+                            IntPtr hIcon = bmp.GetHicon();
+                            _trayIcon.Icon = Icon.FromHandle(hIcon);
+                            // It's good practice to copy the icon and destroy the handle, 
+                            // but NotifyIcon needs the handle to remain valid for its lifetime.
+                            // Actually, Icon.FromHandle doesn't copy the icon data, it just wraps the handle.
                         }
+                    }
+                    else
+                    {
+                        Log($"Warning: Tray resource '{resourceName}' not found.");
+                        _trayIcon.Icon = SystemIcons.Application;
                     }
                 }
             }
@@ -122,6 +134,8 @@ namespace NatifyOverlay
                 Log($"Failed to load tray icon: {ex.Message}");
                 _trayIcon.Icon = SystemIcons.Application; 
             }
+
+            _trayIcon.Visible = true;
 
             var contextMenu = new ContextMenuStrip();
             
@@ -152,7 +166,11 @@ namespace NatifyOverlay
             contextMenu.Items.Add("-"); 
             contextMenu.Items.Add("Exit", null, (s, e) => 
             {
-                if (_trayIcon != null) _trayIcon.Visible = false;
+                if (_trayIcon != null)
+                {
+                    _trayIcon.Visible = false;
+                    _trayIcon.Dispose();
+                }
                 System.Windows.Application.Current.Shutdown();
                 Environment.Exit(0);
             });
@@ -247,5 +265,7 @@ namespace NatifyOverlay
         public System.Collections.Generic.List<ulong> AllowedUserIds { get; set; } = new();
         public int DurationSeconds { get; set; } = 5;
         public bool RunAtStartup { get; set; } = false;
+        public string Theme { get; set; } = "Discord"; // Default, Alternative: "Pink"
+        public bool PlaySound { get; set; } = true;
     }
 }

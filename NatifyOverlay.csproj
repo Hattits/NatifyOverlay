@@ -16,6 +16,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Resource Include="IMG_20260114_070206_012.jpg" />
+    <EmbeddedResource Include="IMG_20260114_070206_012.jpg" />
   </ItemGroup>
 </Project>

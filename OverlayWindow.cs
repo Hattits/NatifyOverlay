@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
+using System.Media;
 
 namespace NatifyOverlay
 {
@@ -22,20 +23,27 @@ namespace NatifyOverlay
         private DispatcherTimer _topmostRefresher;
         private DispatcherTimer _autoFixTimer;
         private bool _isInteractive = false;
+        private bool _playSound = true;
         private IntPtr _gameHwnd = IntPtr.Zero;
         private HashSet<IntPtr> _fixedWindows = new HashSet<IntPtr>();
         
         private const int HOTKEY_ID_INTERACT = 9000;
         private const int HOTKEY_ID_BORDERLESS = 9001;
 
-        // Discord Colors
-        private readonly SolidColorBrush _blurple = new SolidColorBrush(Color.FromRgb(88, 101, 242));
-        private readonly SolidColorBrush _darkGrey = new SolidColorBrush(Color.FromRgb(54, 57, 63));
-        private readonly SolidColorBrush _darkerGrey = new SolidColorBrush(Color.FromRgb(47, 49, 54));
-        private readonly SolidColorBrush _headerGrey = new SolidColorBrush(Color.FromRgb(32, 34, 37));
+        // Theme Colors
+        private SolidColorBrush _accentColor;
+        private SolidColorBrush _cardBackground;
+        private SolidColorBrush _inputBackground;
+        private SolidColorBrush _inputFocusBackground;
+        private SolidColorBrush _primaryText = Brushes.White;
+        private SolidColorBrush _secondaryText = new SolidColorBrush(Color.FromRgb(220, 221, 222));
+        private SolidColorBrush _borderColor;
 
-        public OverlayWindow()
+        public OverlayWindow(string theme = "Discord", bool playSound = true)
         {
+            ApplyTheme(theme);
+            _playSound = playSound;
+
             this.Title = "NatifyOverlay";
             this.Width = 400;
             this.Height = 600;
@@ -64,14 +72,39 @@ namespace NatifyOverlay
             PositionWindow();
         }
 
+        private void ApplyTheme(string theme)
+        {
+            if (theme.Equals("Pink", StringComparison.OrdinalIgnoreCase))
+            {
+                _accentColor = new SolidColorBrush(Color.FromRgb(255, 105, 180)); // HotPink
+                _cardBackground = new SolidColorBrush(Color.FromRgb(255, 240, 245)); // LavenderBlush
+                _inputBackground = new SolidColorBrush(Color.FromRgb(255, 255, 255)); // White
+                _inputFocusBackground = new SolidColorBrush(Color.FromRgb(255, 192, 203)); // Pink
+                _primaryText = new SolidColorBrush(Color.FromRgb(75, 0, 130)); // Indigo
+                _secondaryText = new SolidColorBrush(Color.FromRgb(105, 105, 105)); // DimGray
+                _borderColor = new SolidColorBrush(Color.FromRgb(255, 182, 193)); // LightPink
+            }
+            else // Default Discord
+            {
+                _accentColor = new SolidColorBrush(Color.FromRgb(88, 101, 242)); // Blurple
+                _cardBackground = new SolidColorBrush(Color.FromRgb(54, 57, 63)); // DarkGrey
+                _inputBackground = new SolidColorBrush(Color.FromRgb(47, 49, 54)); // DarkerGrey
+                _inputFocusBackground = new SolidColorBrush(Color.FromRgb(32, 34, 37)); // HeaderGrey
+                _primaryText = Brushes.White;
+                _secondaryText = new SolidColorBrush(Color.FromRgb(220, 221, 222));
+                _borderColor = new SolidColorBrush(Color.FromArgb(50, 255, 255, 255));
+            }
+        }
+
         private void InitUI()
         {
             var mainGrid = new Grid();
             _notificationPanel = new StackPanel { VerticalAlignment = VerticalAlignment.Top, Margin = new Thickness(10) };
             _inputContainer = new Border
             {
-                Background = _darkerGrey, CornerRadius = new CornerRadius(5), Padding = new Thickness(10),
-                VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10), Visibility = Visibility.Collapsed
+                Background = _inputBackground, CornerRadius = new CornerRadius(5), Padding = new Thickness(10),
+                VerticalAlignment = VerticalAlignment.Bottom, Margin = new Thickness(10), Visibility = Visibility.Collapsed,
+                BorderBrush = _borderColor, BorderThickness = new Thickness(1)
             };
 
             var inputGrid = new Grid();
@@ -80,7 +113,7 @@ namespace NatifyOverlay
 
             _replyBox = new TextBox
             {
-                Background = _headerGrey, Foreground = Brushes.White, BorderThickness = new Thickness(0),
+                Background = _inputFocusBackground, Foreground = _primaryText, BorderThickness = new Thickness(0),
                 Padding = new Thickness(5), FontSize = 14, FontFamily = new FontFamily("Segoe UI")
             };
             
@@ -244,6 +277,11 @@ namespace NatifyOverlay
         {
             Application.Current.Dispatcher.Invoke(() =>
             {
+                if (_playSound)
+                {
+                    try { SystemSounds.Asterisk.Play(); } catch { }
+                }
+
                 var notif = CreateNotificationControl(title, message, avatarUrl);
                 _notificationPanel.Children.Add(notif);
                 var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(durationSec) };
@@ -256,16 +294,16 @@ namespace NatifyOverlay
         {
             var border = new Border
             {
-                Background = _darkGrey, CornerRadius = new CornerRadius(8), Padding = new Thickness(10),
+                Background = _cardBackground, CornerRadius = new CornerRadius(8), Padding = new Thickness(10),
                 Margin = new Thickness(0, 0, 0, 10), Width = 300, HorizontalAlignment = HorizontalAlignment.Left,
-                BorderBrush = new SolidColorBrush(Color.FromArgb(50, 255, 255, 255)), BorderThickness = new Thickness(1)
+                BorderBrush = _borderColor, BorderThickness = new Thickness(1)
             };
 
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
 
-            var avatarBorder = new Border { Width = 40, Height = 40, CornerRadius = new CornerRadius(20), Background = _blurple, Margin = new Thickness(0, 0, 10, 0) };
+            var avatarBorder = new Border { Width = 40, Height = 40, CornerRadius = new CornerRadius(20), Background = _accentColor, Margin = new Thickness(0, 0, 10, 0) };
             if (!string.IsNullOrEmpty(avatarUrl))
             {
                 try {
@@ -280,8 +318,8 @@ namespace NatifyOverlay
 
             Grid.SetColumn(avatarBorder, 0); grid.Children.Add(avatarBorder);
             var textStack = new StackPanel();
-            textStack.Children.Add(new TextBlock { Text = title, Foreground = Brushes.White, FontWeight = FontWeights.Bold, FontSize = 14, FontFamily = new FontFamily("Segoe UI") });
-            textStack.Children.Add(new TextBlock { Text = message, Foreground = new SolidColorBrush(Color.FromRgb(220, 221, 222)), FontSize = 13, TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Segoe UI") });
+            textStack.Children.Add(new TextBlock { Text = title, Foreground = _primaryText, FontWeight = FontWeights.Bold, FontSize = 14, FontFamily = new FontFamily("Segoe UI") });
+            textStack.Children.Add(new TextBlock { Text = message, Foreground = _secondaryText, FontSize = 13, TextWrapping = TextWrapping.Wrap, FontFamily = new FontFamily("Segoe UI") });
             Grid.SetColumn(textStack, 1); grid.Children.Add(textStack);
             border.Child = grid;
             return border;
