@@ -25,14 +25,18 @@ jobs:
 
     - name: Publish Standalone EXE
       run: |
-        dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true /p:PublishReadyToRun=true -o ./publish
+        dotnet publish -c Release -r win-x64 --self-contained true /p:PublishReadyToRun=true -o ./publish
+
+    - name: Create ZIP
+      shell: pwsh
+      run: Compress-Archive -Path ./publish/* -DestinationPath ./NatifyOverlay_v1.0.5.zip
 
     - name: Create Release
       id: create_release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: ./publish/NatifyOverlay.exe
+        files: ./NatifyOverlay_v1.0.5.zip
         name: Release ${{ github.ref_name }}
         draft: false
         prerelease: false
