@@ -29,14 +29,14 @@ jobs:
 
     - name: Create ZIP
       shell: pwsh
-      run: Compress-Archive -Path ./publish/* -DestinationPath ./NatifyOverlay_v1.0.5.zip
+      run: Compress-Archive -Path ./publish/* -DestinationPath ./NatifyOverlay_${{ github.ref_name }}.zip
 
     - name: Create Release
       id: create_release
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: ./NatifyOverlay_v1.0.5.zip
+        files: ./NatifyOverlay_${{ github.ref_name }}.zip
         name: Release ${{ github.ref_name }}
         draft: false
         prerelease: false
